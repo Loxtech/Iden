@@ -1,0 +1,58 @@
+﻿@page "/addroles"
+@rendermode InteractiveServer
+
+@using Microsoft.AspNetCore.Identity;
+<!--
+IServiceProvider is registered automatically by ASP.NET Core's dependency injection framework.
+The framework itself creates and registers it when the application starts.
+-->
+@inject IServiceProvider _serviceProvider;
+@inject UserManager<Data.ApplicationUser> UserManage
+@attribute [Microsoft.AspNetCore.Authorization.Authorize(policy: "RequireAdministratorRole")]
+
+<h3>Create Role</h3>
+<hr />
+<div>
+    @if (_message != null)
+    {
+        <div>@_message</div>
+    }
+</div>
+<div>
+    User: <input type="text" @bind="_user" style="width:200px;height:45px;" />
+</div>
+<div style="margin-top:3px;">
+    Role: <input type="text" @bind="_role" style="width:200px;height:45px;" />
+</div>
+<div style="margin-top:3px;">
+    <input type="button" class="btn btn-lg btn-primary" style="width:200px;height:45px;margin-top:3px;margin-left:42px;" @onclick="CreateUserRoles" value="Add" />
+</div>
+<div style="margin-top:3px;">
+    <input type="button" class="btn btn-lg btn-primary" style="width:200px;height:45px;margin-top:3px;margin-left:42px;" @onclick="RemoveUserFromRole" value="Remove" />
+</div>
+
+@code {
+    private string? _message;
+    private string _user;
+    private string _role;
+
+    public async Task CreateUserRoles()
+    {
+        var roleManager = _serviceProvider.GetRequiredService<RoleManager<IdentityRole>>();
+
+        var userRoleCheck = await roleManager.RoleExistsAsync(_role);
+        if (!userRoleCheck)
+            await roleManager.CreateAsync(new IdentityRole(_role));
+
+        Data.ApplicationUser identityUser = await UserManage.FindByEmailAsync(_user);
+        await UserManage.AddToRoleAsync(identityUser, _role);
+        _message = "Success adding user to admin role.";
+    }
+
+    public async Task RemoveUserFromRole()
+    {
+        Data.ApplicationUser identityUser = await UserManage.FindByEmailAsync(_user);
+        await UserManage.RemoveFromRoleAsync(identityUser, _role);
+        _message = "Success removing user from admin role.";
+    }
+}

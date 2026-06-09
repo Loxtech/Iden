@@ -1,0 +1,122 @@
+﻿@page "/Account/ConfirmEmail"
+
+@using System.Text
+@using Microsoft.AspNetCore.Identity
+@using Microsoft.AspNetCore.WebUtilities
+@using BlazorApp2.Data
+@using System.Globalization
+@using System.Text.Encodings.Web
+@using QRCoder
+
+@inject UserManager<ApplicationUser> UserManager
+@inject IdentityRedirectManager RedirectManager
+@inject UrlEncoder UrlEncoder
+
+<PageTitle>Confirm email</PageTitle>
+
+<h1>Confirm email</h1>
+<StatusMessage Message="@statusMessage" />
+@if (_imageSource != null)
+{
+    <div>
+        <img src="@_imageSource" style="width:300px;height:300px;" />
+    </div>
+}
+
+@code {
+    private string? statusMessage;
+    private string? _imageSource;
+
+    [CascadingParameter]
+    private HttpContext HttpContext { get; set; } = default!;
+
+    [SupplyParameterFromQuery]
+    private string? UserId { get; set; }
+
+    [SupplyParameterFromQuery]
+    private string? Code { get; set; }
+
+    private const string AuthenticatorUriFormat = "otpauth://totp/{0}:{1}?secret={2}&issuer={0}&digits=6";
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (UserId is null || Code is null)
+        {
+            RedirectManager.RedirectTo("");
+            return;
+        }
+
+        var user = await UserManager.FindByIdAsync(UserId);
+        if (user is null)
+        {
+            HttpContext.Response.StatusCode = StatusCodes.Status404NotFound;
+            statusMessage = $"Error loading user with ID {UserId}";
+        }
+        else
+        {
+            var code = Encoding.UTF8.GetString(WebEncoders.Base64UrlDecode(Code));
+            var result = await UserManager.ConfirmEmailAsync(user, code);
+            statusMessage = result.Succeeded ? "Thank you for confirming your email." : "Error confirming your email.";
+            await LoadSharedKeyAndQrCodeUriAsync(user);
+        }
+    }
+
+    private async ValueTask LoadSharedKeyAndQrCodeUriAsync(ApplicationUser user)
+    {
+        // Load the authenticator key & QR code URI to display on the form
+        var unformattedKey = await UserManager.GetAuthenticatorKeyAsync(user);
+        if (string.IsNullOrEmpty(unformattedKey))
+        {
+            await UserManager.ResetAuthenticatorKeyAsync(user);
+            unformattedKey = await UserManager.GetAuthenticatorKeyAsync(user);
+        }
+
+        string sharedKey = FormatKey(unformattedKey!);
+
+        var email = await UserManager.GetEmailAsync(user);
+        string authenticatorUri = GenerateQrCodeUri(email!, unformattedKey!);
+        GenerateImageSource(authenticatorUri);
+    }
+
+    private string FormatKey(string unformattedKey)
+    {
+        var result = new StringBuilder();
+        int currentPosition = 0;
+        while (currentPosition + 4 < unformattedKey.Length)
+        {
+            result.Append(unformattedKey.AsSpan(currentPosition, 4)).Append(' ');
+            currentPosition += 4;
+        }
+        if (currentPosition < unformattedKey.Length)
+        {
+            result.Append(unformattedKey.AsSpan(currentPosition));
+        }
+
+        return result.ToString().ToLowerInvariant();
+    }
+
+    private string GenerateQrCodeUri(string email, string unformattedKey)
+    {
+        return string.Format(
+            CultureInfo.InvariantCulture,
+            AuthenticatorUriFormat,
+            UrlEncoder.Encode("Microsoft.AspNetCore.Identity.UI"),
+            UrlEncoder.Encode(email),
+            unformattedKey);
+    }
+
+    private void GenerateImageSource(string authenticatorUri)
+    {
+        // Generate a simple black and white PNG QR code
+        byte[] qrCodeImage = PngByteQRCodeHelper.GetQRCode(authenticatorUri, QRCodeGenerator.ECCLevel.Q, 20);
+        string base64 = Convert.ToBase64String(qrCodeImage);
+        _imageSource = $"data:image/png;base64,{base64}";
+
+        // Generate a scalable black and white SVG QR code
+        // using var qrCodeData = QRCodeGenerator.GenerateQrCode(authenticatorUri, QRCodeGenerator.ECCLevel.Q);
+        // using var svgRenderer = new SvgQRCode(qrCodeData);
+        // string svg = svgRenderer.GetGraphic();
+
+        //_imageSource = authenticatorUri;
+    }
+}

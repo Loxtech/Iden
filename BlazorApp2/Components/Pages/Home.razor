@@ -1,0 +1,77 @@
+﻿@page "/"
+@rendermode InteractiveServer
+@inject AuthenticationStateProvider _authenticationStateProvider;
+
+@inject HttpClient _httpClient;
+@inject IConfiguration _configuration;
+
+<PageTitle>Home</PageTitle>
+
+<img src="images/AlbertslundKomunne.png" style="width:80%" />
+<hr style="margin-top:-8px;"/>
+<h2 style="margin-top:-6px;">Afdeling for trumaramt pensioneret softwareudvikler</h2>
+
+@if (_isAuthenticated)
+{
+    @if (_responseMessage != null)
+    {
+        <div>@_responseMessage</div>
+    }
+
+    <ul style="width:90%;margin: 0 auto;text-align:left;margin-top:20px;font-size:14px;font-family:Verdana;">
+        <li style="list-style-type:none;">
+            Deltag i kurser om fx Traumebevidst tilgang (TBT), PTSD og traumereaktioner og Behandling med Traumefokuseret 
+            Kognitiv Adfærdsterapi. Kompetencecenter for Traumer: <a href="https://kompetencecenterfortraumer.dk/">https://kompetencecenterfortraumer.dk/</a>
+            <div>
+                <button class="w-100 btn btn-lg btn-primary" @onclick="Tilmeld">Tilmeld</button>
+            </div>
+        </li>
+        <li style="list-style-type:none;margin-top:25px;">
+            Deltag i vores <b>TRE (Tension and Trauma Release Exercises) program:</b> En række simple fysiske øvelser,
+            der fremprovokerer rystelser i kroppen for at forløse spændinger og bringe nervesystemet tilbage i balance.
+            Læs mere: <a href="https://www.scleroseforeningen.dk/livet-med/livsstil/alternativ-behandling/tre-tension-and-trauma-release-exercises/">TRE (Tension and Trauma Release Exercises) program</a>
+            <div>
+                <button type="submit" class="w-100 btn btn-lg btn-primary">Tilmeld</button>
+            </div>
+        </li>
+        <li style="list-style-type:none;margin-top:25px;">
+            Vi samarbejder med helper.dk, som kan hjælpe dig med at komme i kontakt med en traume psykolog i dit område. 
+            Læs mere: <a href="https://healper.dk/">helper.dk</a>
+            <div>
+                <button type="submit" class="w-100 btn btn-lg btn-primary">Book samtale</button>
+            </div>
+        </li>
+    </ul>
+}
+else
+{
+    <div style="width:50%;margin: 0 auto; text-align:left;margin-top:50px;">
+        Er du pensioneret softwareudvikler?
+        <br /><br />Har du trauma fra en karrierer i softwareudvikling erhverv, og måske fordi
+        du har tilbragt afslutning af din karrierer som underviser?
+        <br /><br />Register/login for at søg tilskud til aktiviteter eller behandlinger for din trauma.
+    </div>
+}
+<h1></h1>
+
+@code {
+    private bool _isAuthenticated;
+    private string? _responseMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        AuthenticationState authState = await _authenticationStateProvider.GetAuthenticationStateAsync();
+        _isAuthenticated = authState.User.Identity.IsAuthenticated;
+    }
+
+    private async Task Tilmeld()
+    {
+        _httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue(
+            "Bearer",
+            _configuration.GetValue<string>("apitoken")
+        );
+
+        var response = await _httpClient.GetAsync("https://localhost:7265/test");
+        _responseMessage = response.Content.ReadAsStringAsync().Result;
+    }
+}
