@@ -5,67 +5,96 @@
 
 <div class="page" style="min-height:100vh; display:flex; flex-direction:column;">
     <main style="display:flex; flex-direction:column; flex:1;">
-        <div class="top-row px-4" style="display:flex; align-items:center;">
-            @if (_isAdmin)
-            {
-                <a href="/addroles">Add role</a>
-            }
-            
-            <div class="nav-item px-3" style="display:flex; align-items:center; white-space:nowrap;">
-                <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
-                    <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Home
+
+        <!-- Purple Navbar -->
+        <nav style="background-color:#6c3fc5; padding: 0.6rem 1.5rem; display:flex; align-items:center;">
+            <!-- Brand -->
+            <a href="/" style="color:white; font-weight:bold; font-size:1.1rem; text-decoration:none; margin-right:2rem;">
+                Trauma Center
+            </a>
+
+            <!-- Left links -->
+            <div style="display:flex; align-items:center; gap:0.5rem;">
+                <NavLink href="" Match="NavLinkMatch.All"
+                         style="color:white; text-decoration:none; padding:0.3rem 0.8rem; border-radius:4px;"
+                         activeClass="active-nav">
+                    Home
                 </NavLink>
-            </div>
-            <div style="margin-left:auto; display:flex; align-items:center;">
-                @if (_isAdmin)
-                {
-                    <span>[Admin]</span>
-                }
+
                 <AuthorizeView>
                     <Authorized>
-                        <div class="nav-item px-3" style="display:flex; align-items:center; white-space:nowrap;">
-                            <NavLink class="nav-link" href="Account/Manage">
-                                <span class="bi bi-person-fill-nav-menu" aria-hidden="true"></span> @context.User.Identity?.Name
-                            </NavLink>
-                        </div>
-                        <div class="nav-item px-3">
-                            <form action="Account/Logout" method="post">
-                                <AntiforgeryToken />
-                                <input type="hidden" name="ReturnUrl" value="@currentUrl" />
-                                <button type="submit" class="nav-link">
-                                    <span class="bi bi-arrow-bar-left-nav-menu" aria-hidden="true"></span> Logout
-                                </button>
-                            </form>
-                        </div>
+                        <NavLink href="Aktiviteter"
+                                 style="color:white; text-decoration:none; padding:0.3rem 0.8rem;"
+                                 activeClass="active-nav">
+                            Aktiviteter
+                        </NavLink>
                     </Authorized>
                     <NotAuthorized>
-                        <div class="nav-item px-3">
-                            <NavLink class="nav-link" href="Account/Register">
-                                <span class="bi bi-person-nav-menu" aria-hidden="true"></span> Register
-                            </NavLink>
-                        </div>
-                        <div class="nav-item px-3">
-                            <NavLink class="nav-link" href="Account/Login">
-                                <span class="bi bi-person-badge-nav-menu" aria-hidden="true"></span> Login
-                            </NavLink>
-                        </div>
-                        <div style="display:inline-block;width:2px;height:14px;background-color:black;vertical-align:middle;"></div>
-                        <div class="nav-item px-3" style="margin-left:-25px;">
-                            <NavLink class="nav-link" href="Account/RegisterPasswordless">
-                                <span class="bi bi-person-nav-menu" aria-hidden="true"></span> Register (Passwordless)
-                            </NavLink>
-                        </div>
-                        <div class="nav-item px-3">
-                            <NavLink class="nav-link" href="Account/LoginPasswordless">
-                                <span class="bi bi-person-badge-nav-menu" aria-hidden="true"></span> Login (Passwordless)
-                            </NavLink>
-                        </div>
+                        <NavLink href="Aktiviteter"
+                                 style="color:white; text-decoration:none; padding:0.3rem 0.8rem;"
+                                 activeClass="active-nav">
+                            Aktiviteter
+                        </NavLink>
+                    </NotAuthorized>
+                </AuthorizeView>
+
+                @if (_isAdmin)
+                {
+                    <NavLink href="/addroles"
+                             style="color:white; text-decoration:none; padding:0.3rem 0.8rem;"
+                             activeClass="active-nav">
+                        Admin
+                    </NavLink>
+                }
+            </div>
+
+            <!-- Right links -->
+            <div style="margin-left:auto; display:flex; align-items:center; gap:0.25rem;">
+                <AuthorizeView>
+                    <Authorized>
+                        <NavLink href="Account/Manage"
+                                 style="color:white; text-decoration:none; padding:0.3rem 0.8rem;"
+                                 activeClass="active-nav">
+                            @context.User.Identity?.Name
+                        </NavLink>
+                        <form action="Account/Logout" method="post" style="margin:0;">
+                            <AntiforgeryToken />
+                            <input type="hidden" name="ReturnUrl" value="@currentUrl" />
+                            <button type="submit"
+                                    style="background:none; border:none; color:white; cursor:pointer; padding:0.3rem 0.8rem;">
+                                Logout
+                            </button>
+                        </form>
+                    </Authorized>
+                    <NotAuthorized>
+                        <NavLink href="Account/Register"
+                                 style="color:white; text-decoration:none; padding:0.3rem 0.8rem;"
+                                 activeClass="active-nav">
+                            Register
+                        </NavLink>
+                        <NavLink href="Account/Login"
+                                 style="color:white; text-decoration:none; padding:0.3rem 0.8rem;"
+                                 activeClass="active-nav">
+                            Login
+                        </NavLink>
+                        <div style="width:1px; height:14px; background-color:rgba(255,255,255,0.4);"></div>
+                        <NavLink href="Account/RegisterPasswordless"
+                                 style="color:white; text-decoration:none; padding:0.3rem 0.8rem;"
+                                 activeClass="active-nav">
+                            Register (Passwordless)
+                        </NavLink>
+                        <NavLink href="Account/LoginPasswordless"
+                                 style="color:white; text-decoration:none; padding:0.3rem 0.8rem;"
+                                 activeClass="active-nav">
+                            Login (Passwordless)
+                        </NavLink>
                     </NotAuthorized>
                 </AuthorizeView>
             </div>
-        </div>
+        </nav>
 
-        <article class="content px-4" style="margin:0 auto; text-align:center; flex:1;width:60%;">
+        <!-- Page content -->
+        <article style="flex:1; padding: 0 1.5rem;">
             @Body
         </article>
 
@@ -76,6 +105,13 @@
         </footer>
     </main>
 </div>
+
+<style>
+    .active-nav {
+        background-color: rgba(255,255,255,0.2);
+        border-radius: 4px;
+    }
+</style>
 
 <div id="blazor-error-ui" data-nosnippet>
     An unhandled error has occurred.
@@ -91,7 +127,7 @@
     protected override async Task OnInitializedAsync()
     {
         var stateProvider = await _authenticationStateProvider.GetAuthenticationStateAsync();
-        _isAuthenticated = stateProvider.User.Identity.IsAuthenticated;
+        _isAuthenticated = stateProvider.User.Identity?.IsAuthenticated ?? false;
         _isAdmin = stateProvider.User.IsInRole("Admin");
 
         currentUrl = NavigationManager.ToBaseRelativePath(NavigationManager.Uri);

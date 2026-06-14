@@ -1,58 +1,235 @@
 ﻿@page "/addroles"
 @rendermode InteractiveServer
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Identity
+@using Microsoft.EntityFrameworkCore
+@attribute [Authorize(Policy = "RequireAdministratorRole")]
 
-@using Microsoft.AspNetCore.Identity;
-<!--
-IServiceProvider is registered automatically by ASP.NET Core's dependency injection framework.
-The framework itself creates and registers it when the application starts.
--->
-@inject IServiceProvider _serviceProvider;
-@inject UserManager<Data.ApplicationUser> UserManage
-@attribute [Microsoft.AspNetCore.Authorization.Authorize(policy: "RequireAdministratorRole")]
+@inject IServiceProvider _serviceProvider
+@inject UserManager<Data.ApplicationUser> UserManager
+@inject RoleManager<IdentityRole> RoleManager
+@inject IJSRuntime JS
 
-<h3>Create Role</h3>
-<hr />
-<div>
-    @if (_message != null)
+<PageTitle>Admin Dashboard - Brugerstyring</PageTitle>
+
+<div class="container-fluid py-5">
+    <div class="row mb-4">
+        <div class="col">
+            <h1 class="display-5 fw-bold">Admin Dashboard</h1>
+            <p class="lead text-muted">Administrer brugere, tildel roller og overvåg centerets drift</p>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrEmpty(statusMessage))
     {
-        <div>@_message</div>
+        <div class="alert @(isError ? "alert-danger" : "alert-info") alert-dismissible fade show" role="alert">
+            @statusMessage
+            <button type="button" class="btn-close" @onclick="() => statusMessage = null"></button>
+        </div>
     }
-</div>
-<div>
-    User: <input type="text" @bind="_user" style="width:200px;height:45px;" />
-</div>
-<div style="margin-top:3px;">
-    Role: <input type="text" @bind="_role" style="width:200px;height:45px;" />
-</div>
-<div style="margin-top:3px;">
-    <input type="button" class="btn btn-lg btn-primary" style="width:200px;height:45px;margin-top:3px;margin-left:42px;" @onclick="CreateUserRoles" value="Add" />
-</div>
-<div style="margin-top:3px;">
-    <input type="button" class="btn btn-lg btn-primary" style="width:200px;height:45px;margin-top:3px;margin-left:42px;" @onclick="RemoveUserFromRole" value="Remove" />
+
+    <div class="card shadow-sm">
+        <div class="card-header bg-primary text-white">
+            <h5 class="card-title mb-0">Brugerstyring</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Email</th>
+                            <th>Rolle</th>
+                            <th>Status</th>
+                            <th>Handlinger</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (users is null)
+                        {
+                            <tr>
+                                <td colspan="4" class="text-center py-4">
+                                    <span class="spinner-border spinner-border-sm"></span> Indlæses...
+                                </td>
+                            </tr>
+                        }
+                        else if (!users.Any())
+                        {
+                            <tr>
+                                <td colspan="4" class="text-center py-4 text-muted">Ingen brugere fundet.</td>
+                            </tr>
+                        }
+                        else
+                        {
+                            @foreach (var u in users)
+                            {
+                                <tr>
+                                    <td><strong>@u.Email</strong></td>
+                                    <td>
+                                        @if (u.IsAdmin)
+                                        {
+                                            <span class="badge bg-danger">Admin</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-info">Borger</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-success">Aktiv</span>
+                                    </td>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-primary me-2"
+                                                @onclick="() => ToggleAdminAsync(u.Email)"
+                                                disabled="@(u.Email == currentUserEmail)">
+                                            @(u.IsAdmin ? "Fjern Admin" : "Gør Admin")
+                                        </button>
+
+                                        @if (!u.IsAdmin)
+                                        {
+                                            <button class="btn btn-sm btn-outline-danger"
+                                                    @onclick="() => DeleteUserAsync(u.Email)"
+                                                    disabled="@(u.Email == currentUserEmail)">
+                                                Slet
+                                            </button>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
 </div>
 
 @code {
-    private string? _message;
-    private string _user;
-    private string _role;
+    private List<UserViewModel>? users;
+    private string? statusMessage;
+    private bool isError = false;
+    private string currentUserEmail = string.Empty;
 
-    public async Task CreateUserRoles()
+    // ── Update these to match your Minimal API ──
+    private const string MinimalApiBase = "https://localhost:7265";
+    private const string AdminEmail = "admin@admin.com";
+    private const string AdminPassword = "Admin@1234!";
+
+    protected override async Task OnInitializedAsync() => await LoadUsersAsync();
+
+    private async Task LoadUsersAsync()
     {
-        var roleManager = _serviceProvider.GetRequiredService<RoleManager<IdentityRole>>();
+        statusMessage = null;
+        var userList = await UserManager.Users.ToListAsync();
+        var vm = new List<UserViewModel>(userList.Count);
 
-        var userRoleCheck = await roleManager.RoleExistsAsync(_role);
-        if (!userRoleCheck)
-            await roleManager.CreateAsync(new IdentityRole(_role));
+        foreach (var u in userList)
+        {
+            var isAdmin = await UserManager.IsInRoleAsync(u, "Admin");
+            vm.Add(new UserViewModel
+            {
+                Email = u.Email ?? string.Empty,
+                IsAdmin = isAdmin
+            });
+        }
 
-        Data.ApplicationUser identityUser = await UserManage.FindByEmailAsync(_user);
-        await UserManage.AddToRoleAsync(identityUser, _role);
-        _message = "Success adding user to admin role.";
+        users = vm.OrderByDescending(x => x.IsAdmin).ThenBy(x => x.Email).ToList();
+        StateHasChanged();
     }
 
-    public async Task RemoveUserFromRole()
+    private async Task ToggleAdminAsync(string email)
     {
-        Data.ApplicationUser identityUser = await UserManage.FindByEmailAsync(_user);
-        await UserManage.RemoveFromRoleAsync(identityUser, _role);
-        _message = "Success removing user from admin role.";
+        isError = false;
+        statusMessage = null;
+
+        var user = await UserManager.FindByEmailAsync(email);
+        if (user is null) { SetError("Bruger ikke fundet."); return; }
+
+        if (await UserManager.IsInRoleAsync(user, "Admin"))
+        {
+            var result = await UserManager.RemoveFromRoleAsync(user, "Admin");
+            statusMessage = result.Succeeded
+                ? $"Admin-rolle fjernet fra {email}."
+                : string.Join("; ", result.Errors.Select(e => e.Description));
+            if (!result.Succeeded) isError = true;
+        }
+        else
+        {
+            if (!await RoleManager.RoleExistsAsync("Admin"))
+                await RoleManager.CreateAsync(new IdentityRole("Admin"));
+
+            var result = await UserManager.AddToRoleAsync(user, "Admin");
+            statusMessage = result.Succeeded
+                ? $"Admin-rolle tildelt til {email}."
+                : string.Join("; ", result.Errors.Select(e => e.Description));
+            if (!result.Succeeded) isError = true;
+        }
+
+        await LoadUsersAsync();
+    }
+
+    private async Task DeleteUserAsync(string email)
+    {
+        isError = false;
+        statusMessage = null;
+
+        var confirmed = await JS.InvokeAsync<bool>("confirm", $"Slet bruger {email}? Denne handling kan ikke fortrydes.");
+        if (!confirmed) return;
+
+        try
+        {
+            var handler = new HttpClientHandler
+            {
+                ServerCertificateCustomValidationCallback =
+                    HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
+            };
+            var client = new HttpClient(handler) { BaseAddress = new Uri(MinimalApiBase) };
+
+            // 1. Login to get JWT token
+            var loginResponse = await client.PostAsJsonAsync("/login", new
+            {
+                email = AdminEmail,
+                password = AdminPassword
+            });
+
+            if (!loginResponse.IsSuccessStatusCode)
+            {
+                SetError("Kunne ikke logge ind på API'et.");
+                return;
+            }
+
+            var tokenResult = await loginResponse.Content.ReadFromJsonAsync<TokenResponse>();
+            if (tokenResult?.Token is null) { SetError("Ugyldigt token fra API."); return; }
+
+            // 2. Call DELETE /users/{email}
+            var request = new HttpRequestMessage(HttpMethod.Delete, $"/users/{Uri.EscapeDataString(email)}");
+            request.Headers.Authorization =
+                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", tokenResult.Token);
+
+            var deleteResponse = await client.SendAsync(request);
+
+            statusMessage = deleteResponse.IsSuccessStatusCode
+                ? $"Bruger {email} blev slettet."
+                : $"Sletning mislykkedes: {deleteResponse.StatusCode}";
+            if (!deleteResponse.IsSuccessStatusCode) isError = true;
+        }
+        catch (Exception ex)
+        {
+            SetError($"Fejl: {ex.Message}");
+        }
+
+        await LoadUsersAsync();
+    }
+
+    private void SetError(string msg) { statusMessage = msg; isError = true; }
+
+    private sealed class UserViewModel
+    {
+        public string Email { get; init; } = string.Empty;
+        public bool IsAdmin { get; set; }
+    }
+
+    private sealed class TokenResponse
+    {
+        public string Token { get; set; } = string.Empty;
     }
 }

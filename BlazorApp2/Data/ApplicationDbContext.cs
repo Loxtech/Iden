@@ -7,4 +7,5 @@ namespace BlazorApp2.Data
     {
         public DbSet<PasskeyCredential> PasskeyCredentials => Set<PasskeyCredential>();
     }
+
 }

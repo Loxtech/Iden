@@ -25,12 +25,7 @@ builder.Services.AddScoped<IdentityRedirectManager>();
 builder.Services.AddScoped<AuthenticationStateProvider, IdentityRevalidatingAuthenticationStateProvider>();
 
 builder.Services.AddAuthentication();
-//builder.Services.AddAuthentication(options =>
-//    {
-//        options.DefaultScheme = IdentityConstants.ApplicationScheme;
-//        options.DefaultSignInScheme = IdentityConstants.ExternalScheme;
-//    })
-//    .AddIdentityCookies();
+
 
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
@@ -40,20 +35,12 @@ builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
 {
     options.SignIn.RequireConfirmedAccount = true;
+    options.Stores.SchemaVersion = IdentitySchemaVersions.Version3;
 })
 .AddRoles<IdentityRole>()
 .AddEntityFrameworkStores<ApplicationDbContext>()
 .AddDefaultTokenProviders();
 
-//builder.Services.AddIdentityCore<ApplicationUser>(options =>
-//    {
-//        options.SignIn.RequireConfirmedAccount = true;
-//        options.Stores.SchemaVersion = IdentitySchemaVersions.Version3;
-//    })
-//    .AddRoles<IdentityRole>()
-//    .AddEntityFrameworkStores<ApplicationDbContext>()
-//    .AddSignInManager()
-//    .AddDefaultTokenProviders();
 
 builder.Services.AddSingleton<IEmailSender<ApplicationUser>, IdentityNoOpEmailSender>();
 
@@ -84,8 +71,8 @@ builder.Services.AddScoped(sp =>
     return new HttpClient { BaseAddress = new Uri(nav.BaseUri) };
 });
 
-string kestrelCertPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), @".aspnet\https\Niels.pfx");
-string kestrelCertPassword = "Niels@1";
+string kestrelCertPath = Path.Combine(Directory.GetCurrentDirectory(), "Certificates", "server.pfx");
+string kestrelCertPassword = "Password123";
 
 builder.WebHost.ConfigureKestrel(options =>
 {
@@ -240,5 +227,35 @@ app.MapPost("/webauthn/login", async (AssertionRequest request, IFido2 fido2, Ap
 
     return Results.Ok();
 });
+// Seed default admin account
+using (var scope = app.Services.CreateScope())
+{
+    var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+    var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
+
+    // Create Admin role if it doesn't exist
+    if (!await roleManager.RoleExistsAsync("Admin"))
+        await roleManager.CreateAsync(new IdentityRole("Admin"));
+
+    // Create default admin user if it doesn't exist
+    var adminEmail = "admin@admin.com";
+    var adminPassword = "Admin@1234!";
+
+    var existingAdmin = await userManager.FindByEmailAsync(adminEmail);
+    if (existingAdmin == null)
+    {
+        var adminUser = new ApplicationUser
+        {
+            UserName = adminEmail,
+            Email = adminEmail,
+            EmailConfirmed = true
+        };
+
+        var result = await userManager.CreateAsync(adminUser, adminPassword);
+        if (result.Succeeded)
+            await userManager.AddToRoleAsync(adminUser, "Admin");
+    }
+}
 
 app.Run();
+public partial class Program { }

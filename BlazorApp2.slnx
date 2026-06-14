@@ -1,3 +1,5 @@
 <Solution>
+  <Project Path="../Api/MinimalApi/MinimalApi.csproj" />
+  <Project Path="BlazorApp2.Tests/BlazorApp2.Tests.csproj" Id="4ce96504-c20e-4b01-9899-95b092988f1a" />
   <Project Path="BlazorApp2/BlazorApp2.csproj" />
 </Solution>
