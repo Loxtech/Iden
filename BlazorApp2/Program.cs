@@ -258,4 +258,7 @@ using (var scope = app.Services.CreateScope())
 }
 
 app.Run();
-public partial class Program { }
+namespace BlazorApp2
+{
+    public partial class Program { }
+}

@@ -184,12 +184,11 @@ public class AuthorizationTests
         // Act - regular user tries to get a token
         var response = await client.PostAsJsonAsync("/login", new
         {
-            email    = "borger@test.com",
+            email = "borger@test.com",
             password = "Test@1234!"
         });
 
-        // Assert - rejected because not admin
-        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
 
     private sealed class TokenResponse

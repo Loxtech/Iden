@@ -14,6 +14,7 @@ namespace BlazorApp2.Tests;
 /// </summary>
 public class AuthenticationTests
 {
+
     // ── AGAINST CODE ────────────────────────────────────────────────
 
     [Fact]
@@ -86,7 +87,7 @@ public class AuthenticationTests
     public async Task UnauthenticatedUser_CanAccess_HomePage()
     {
         // Arrange
-        await using var factory = new WebApplicationFactory<Program>();
+        await using var factory = new WebApplicationFactory<BlazorApp2.Program>(); 
         var client = factory.CreateClient(new WebApplicationFactoryClientOptions
         {
             AllowAutoRedirect = false
@@ -103,7 +104,7 @@ public class AuthenticationTests
     public async Task UnauthenticatedUser_IsRedirected_FromProtectedPage()
     {
         // Arrange
-        await using var factory = new WebApplicationFactory<Program>();
+        await using var factory = new WebApplicationFactory<BlazorApp2.Program>();
         var client = factory.CreateClient(new WebApplicationFactoryClientOptions
         {
             AllowAutoRedirect = false
